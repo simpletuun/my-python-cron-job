@@ -8,6 +8,7 @@ on:
     - cron: '16 2 * * 1-5'   # UTC 02:16 (Beijing 10:16)
     - cron: '31 6 * * 1-5'   # UTC 06:31 (Beijing 14:31)
     - cron: '1 8 * * 1-5'    # UTC 08:01 (Beijing 16:01)
+    - cron: '45 18 * * 1-5'    # UTC 08:01 (Beijing 2:45)
   workflow_dispatch:
 
 env:
