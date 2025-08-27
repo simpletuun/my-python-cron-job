@@ -1,6 +1,5 @@
 import time
 import json
-import schedule
 import smtplib
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
@@ -13,19 +12,18 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.chrome.options import Options
 
-
 class CFETSScheduledSpider:
     def __init__(self):
         self.url = "https://www.cfets-nex.com.cn/Market/marketData/money"
         self.today_data = {}
         self.target_email = "ichenry@qq.com"
 
-        # 邮件配置 - 请根据您的邮箱设置修改
+        # Initialize email config with placeholder values, to be populated by the workflow
         self.email_config = {
-            'smtp_server': 'smtp.qq.com',  # QQ邮箱SMTP服务器
+            'smtp_server': '',
             'smtp_port': 587,
-            'sender_email': '',  # 您的发送邮箱
-            'sender_password': '',  # 您的邮箱授权码（不是登录密码）
+            'sender_email': '',
+            'sender_password': '',
         }
 
     def setup_driver(self):
@@ -184,7 +182,7 @@ class CFETSScheduledSpider:
                             'Content-Disposition',
                             f'attachment; filename= {attach_file}',
                         )
-                        msg.attach(part)
+                    msg.attach(part)
                 except Exception as e:
                     print(f"添加附件失败: {e}")
 
@@ -257,16 +255,6 @@ class CFETSScheduledSpider:
             filename = f"sentiment_data_{date.today().strftime('%Y%m%d')}.json"
             self.send_email(subject, body, filename)
 
-    def setup_schedule(self):
-        """设置定时任务"""
-        schedule.clear()
-        schedule.every().day.at("08:46").do(self.job_0846)
-        schedule.every().day.at("10:16").do(self.job_1016)
-        schedule.every().day.at("14:31").do(self.job_1431)
-        schedule.every().day.at("16:01").do(self.job_1601)
-
-        print("定时任务已设置: 08:46, 10:16, 14:31, 16:01")
-
     def setup_email_config(self, sender_email, sender_password, smtp_server='smtp.qq.com', smtp_port=587):
         """设置邮件配置"""
         self.email_config.update({
@@ -276,19 +264,6 @@ class CFETSScheduledSpider:
             'smtp_port': smtp_port
         })
         print("邮件配置已更新")
-
-    def run_scheduled(self):
-        """运行定时任务"""
-        self.setup_schedule()
-        print(f"\n定时爬虫启动 - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"数据将发送到: {self.target_email}")
-
-        try:
-            while True:
-                schedule.run_pending()
-                time.sleep(30)
-        except KeyboardInterrupt:
-            print("\n定时任务已停止")
 
     def test_now(self):
         """测试模式"""
@@ -302,17 +277,4 @@ class CFETSScheduledSpider:
         return result
 
 
-if __name__ == "__main__":
-    spider = CFETSScheduledSpider()
-
-    # 设置邮件配置 - 请填入您的邮箱信息
-    spider.setup_email_config(
-        sender_email="ichenry@qq.com",      # 您的发送邮箱
-        sender_password=""       # 您的邮箱授权码
-    )
-
-    # 测试模式
-    spider.test_now()
-
-    # 定时模式 - 取消注释启用
-    # spider.run_scheduled()
+This video shows how to run a Python script from within a GitHub Actions workflow.
