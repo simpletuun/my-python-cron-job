@@ -89,7 +89,7 @@ jobs:
         echo "对应北京时间: $BEIJING_TIME"
         
         # 根据不同时间点执行不同任务
-        run:
+        run: |
           python <<EOF
 import os
 import sys
