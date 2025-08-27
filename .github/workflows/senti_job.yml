@@ -16,6 +16,8 @@ env:
 jobs:
   collect-data:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write # 授予写入权限
     timeout-minutes: 15
 
     steps:
@@ -33,7 +35,7 @@ jobs:
     - name: Setup Chrome and ChromeDriver
       uses: browser-actions/setup-chrome@v1
       with:
-        chrome-version: stable  # 使用稳定版
+        chrome-version: stable # 使用稳定版
 
     - name: Install dependencies
       run: |
