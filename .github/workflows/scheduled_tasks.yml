@@ -4,43 +4,37 @@ on:
   schedule:
     # 北京时间 08:46, 10:16, 14:31, 16:01 (UTC时间减去8小时)
     # 仅限周一到周五 (1-5)，因为周末可能没有数据
-    - cron: '46 14 * * 1-5'   # 每天 UTC 00:46 (北京 08:46)
+    - cron: '46 0 * * 1-5'   # 每天 UTC 00:46 (北京 08:46)
     - cron: '16 2 * * 1-5'   # 每天 UTC 02:16 (北京 10:16)
     - cron: '31 6 * * 1-5'   # 每天 UTC 06:31 (北京 14:31)
     - cron: '1 8 * * 1-5'    # 每天 UTC 08:01 (北京 16:01)
-  workflow_dispatch: # 允许手动触发
+  workflow_dispatch:
 
 env:
-  # 设置环境变量，用于脚本中判断是否在 GitHub Actions 中运行
   GITHUB_ACTIONS: true
 
 jobs:
   collect-data:
     runs-on: ubuntu-latest
-    timeout-minutes: 15 # 设置超时时间
+    timeout-minutes: 15
 
     steps:
-    # 1. 检出代码
     - name: Checkout code
       uses: actions/checkout@v4
       with:
-        # 获取所有历史记录，以便后续提交数据文件
         fetch-depth: 0
 
-    # 2. 设置 Python 环境
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.11'
         cache: 'pip'
 
-    # 3. 安装 Chrome 浏览器
     - name: Install Chrome
       run: |
         sudo apt-get update
         sudo apt-get install -y google-chrome-stable
 
-    # 4. 安装 ChromeDriver（与 Chrome 版本匹配）
     - name: Install ChromeDriver
       run: |
         CHROME_VERSION=$(google-chrome --version | grep -oE '[0-9]+\.[0-9]+\.[0-9]+')
@@ -52,16 +46,13 @@ jobs:
         sudo chmod +x /usr/local/bin/chromedriver
         chromedriver --version
 
-    # 5. 安装 Python 依赖
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip
         pip install selenium==4.15.0 schedule
 
-    # 6. 设置邮箱配置（通过 GitHub Secrets）
     - name: Setup email configuration
       run: |
-        # 创建临时配置文件或直接使用环境变量
         echo "EMAIL_CONFIG='{\"smtp_server\": \"${{ secrets.SMTP_SERVER }}\", \"smtp_port\": ${{ secrets.SMTP_PORT }}, \"sender_email\": \"${{ secrets.SENDER_EMAIL }}\", \"sender_password\": \"${{ secrets.SENDER_PASSWORD }}\"}'" >> $GITHUB_ENV
       env:
         SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
@@ -69,46 +60,32 @@ jobs:
         SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
         SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
 
-    # 7. 运行爬虫（根据时间点执行相应任务）
     - name: Run CFETS Spider
       run: |
-        # 获取当前UTC时间并转换为北京时间（UTC+8）
         CURRENT_HOUR=$(date -u +%H)
         CURRENT_MINUTE=$(date -u +%M)
         echo "当前UTC时间: $CURRENT_HOUR:$CURRENT_MINUTE"
-        
-        # 计算北京时间（UTC+8）
         BEIJING_HOUR=$((10#$CURRENT_HOUR + 8))
         if [ $BEIJING_HOUR -ge 24 ]; then
           BEIJING_HOUR=$((BEIJING_HOUR - 24))
         fi
-        
-        # 格式化为两位数
         BEIJING_HOUR=$(printf "%02d" $BEIJING_HOUR)
         BEIJING_TIME="$BEIJING_HOUR:$CURRENT_MINUTE"
         echo "对应北京时间: $BEIJING_TIME"
-        
-        # 根据不同时间点执行不同任务
-        run: |
-          python <<EOF
+        python <<EOF
 import os
 import sys
 sys.path.append(os.getcwd())
-
-from cfets_spider import CFETSScheduledSpider
-
+from CFETSSentimentSpider import CFETSScheduledSpider
 spider = CFETSScheduledSpider()
-
 spider.setup_email_config(
     sender_email='${{ secrets.SENDER_EMAIL }}',
     sender_password='${{ secrets.SENDER_PASSWORD }}',
     smtp_server='${{ secrets.SMTP_SERVER }}',
     smtp_port=${{ secrets.SMTP_PORT }}
 )
-
 current_time = '$BEIJING_TIME'
 print(f'检测到北京时间: {current_time}')
-
 if current_time == '08:46':
     spider.job_0846()
 elif current_time == '10:16':
@@ -124,25 +101,17 @@ else:
         sys.exit(1)
 EOF
 
-    # 8. 保存数据文件（如果有新数据）
     - name: Commit and push data
       run: |
-        # 配置Git用户信息
         git config --local user.email "action@github.com"
         git config --local user.name "GitHub Action"
-        
-        # 添加所有JSON数据文件
         git add sentiment_data_*.json
-        
-        # 检查是否有文件需要提交
-        if git diff --staged --quiet; then
+        if [ -z "$(git diff --cached --name-only)" ]; then
           echo "没有新的数据文件需要提交"
         else
-          # 提交并推送
           git commit -m "Auto-update: CFETS sentiment data for $(date +%Y%m%d)"
           git push
           echo "数据文件已提交并推送"
         fi
       env:
-        # 使用GITHUB_TOKEN进行推送
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
