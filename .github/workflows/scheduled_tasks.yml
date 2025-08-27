@@ -60,65 +60,66 @@ jobs:
         cat > run_spider.py << 'EOF'
 import os
 import sys
-from datetime import datetime
-
-# Add current directory to Python path
-sys.path.append(os.getcwd())
-
-try:
-    from CFETSSentimentSpider import CFETSScheduledSpider
-    
-    # Get current time argument
-    current_time = sys.argv[1] if len(sys.argv) > 1 else None
-    
-    # Get email config from environment variable
-    sender_email = '${{ secrets.SENDER_EMAIL }}'
-    sender_password = '${{ secrets.SENDER_PASSWORD }}'
-    smtp_server = '${{ secrets.SMTP_SERVER }}'
-    smtp_port = ${{ secrets.SMTP_PORT }}
-    
-    spider = CFETSScheduledSpider()
-    spider.setup_email_config(
-        sender_email=sender_email,
-        sender_password=sender_password,
-        smtp_server=smtp_server,
-        smtp_port=smtp_port
-    )
-    
-    if current_time:
-        print(f'Beijing time: {current_time}')
-        if current_time == '08:46':
-            spider.job_0846()
-        elif current_time == '10:16':
-            spider.job_1016()
-        elif current_time == '14:31':
-            spider.job_1431()
-        elif current_time == '16:01':
-            spider.job_1601()
-        else:
-            print(f'Current time {current_time} is not a scheduled run, running test mode.')
-            result = spider.test_now()
-            if not result:
-                sys.exit(1)
-    else:
-        print('Test mode (no time argument)')
-        result = spider.test_now()
-        if not result:
-            sys.exit(1)
-            
-except ImportError as e:
-    print(f"Import error: {e}")
-    print("Current working directory:", os.getcwd())
-    print("Directory contents:", os.listdir('.'))
-    if 'cfets_spider.py' not in os.listdir('.'):
-        print("Error: CFETSSentimentSpider.py does not exist")
-    sys.exit(1)
-except Exception as e:
-    print(f"Execution error: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
 EOF
+# from datetime import datetime
+
+# # Add current directory to Python path
+# sys.path.append(os.getcwd())
+
+# try:
+#     from CFETSSentimentSpider import CFETSScheduledSpider
+    
+#     # Get current time argument
+#     current_time = sys.argv[1] if len(sys.argv) > 1 else None
+    
+#     # Get email config from environment variable
+#     sender_email = '${{ secrets.SENDER_EMAIL }}'
+#     sender_password = '${{ secrets.SENDER_PASSWORD }}'
+#     smtp_server = '${{ secrets.SMTP_SERVER }}'
+#     smtp_port = ${{ secrets.SMTP_PORT }}
+    
+#     spider = CFETSScheduledSpider()
+#     spider.setup_email_config(
+#         sender_email=sender_email,
+#         sender_password=sender_password,
+#         smtp_server=smtp_server,
+#         smtp_port=smtp_port
+#     )
+    
+#     if current_time:
+#         print(f'Beijing time: {current_time}')
+#         if current_time == '08:46':
+#             spider.job_0846()
+#         elif current_time == '10:16':
+#             spider.job_1016()
+#         elif current_time == '14:31':
+#             spider.job_1431()
+#         elif current_time == '16:01':
+#             spider.job_1601()
+#         else:
+#             print(f'Current time {current_time} is not a scheduled run, running test mode.')
+#             result = spider.test_now()
+#             if not result:
+#                 sys.exit(1)
+#     else:
+#         print('Test mode (no time argument)')
+#         result = spider.test_now()
+#         if not result:
+#             sys.exit(1)
+            
+# except ImportError as e:
+#     print(f"Import error: {e}")
+#     print("Current working directory:", os.getcwd())
+#     print("Directory contents:", os.listdir('.'))
+#     if 'cfets_spider.py' not in os.listdir('.'):
+#         print("Error: CFETSSentimentSpider.py does not exist")
+#     sys.exit(1)
+# except Exception as e:
+#     print(f"Execution error: {e}")
+#     import traceback
+#     traceback.print_exc()
+#     sys.exit(1)
+# EOF
 
     - name: Run CFETS Spider
       run: |
