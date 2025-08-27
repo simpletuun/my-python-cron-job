@@ -4,18 +4,14 @@ on:
   schedule:
     # Beijing Time: 08:46, 10:16, 14:31, 16:01 (UTC minus 8 hours)
     # Only run from Monday to Friday (1-5), weekends may have no data
-    - cron: '46 0 * * 1-5'   
-    # UTC 00:46 (Beijing 08:46)
-    - cron: '16 2 * * 1-5'  
-    # UTC 02:16 (Beijing 10:16)
-    - cron: '31 6 * * 1-5'  
-    # UTC 06:31 (Beijing 14:31)
-    - cron: '1 8 * * 1-5'  
-    # UTC 08:01 (Beijing 16:01)
+    - cron: '46 0 * * 1-5'   # UTC 00:46 (Beijing 08:46)
+    - cron: '16 2 * * 1-5'   # UTC 02:16 (Beijing 10:16)
+    - cron: '31 6 * * 1-5'   # UTC 06:31 (Beijing 14:31)
+    - cron: '1 8 * * 1-5'    # UTC 08:01 (Beijing 16:01)
   workflow_dispatch:
 
 env:
-  GITHUB_ACTORS: true
+  GITHUB_ACTIONS: true
 
 jobs:
   collect-data:
