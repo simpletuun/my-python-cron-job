@@ -2,12 +2,12 @@ name: CFETS Sentiment Data Collector
 
 on:
   schedule:
-    # 北京时间 08:46, 10:16, 14:31, 16:01 (UTC时间减去8小时)
-    # 仅限周一到周五 (1-5)，因为周末可能没有数据
-    - cron: '46 0 * * 1-5'   # 每天 UTC 00:46 (北京 08:46)
-    - cron: '16 2 * * 1-5'   # 每天 UTC 02:16 (北京 10:16)
-    - cron: '31 6 * * 1-5'   # 每天 UTC 06:31 (北京 14:31)
-    - cron: '1 8 * * 1-5'    # 每天 UTC 08:01 (北京 16:01)
+    # Beijing Time: 08:46, 10:16, 14:31, 16:01 (UTC minus 8 hours)
+    # Only run from Monday to Friday (1-5), weekends may have no data
+    - cron: '46 0 * * 1-5'   # UTC 00:46 (Beijing 08:46)
+    - cron: '16 2 * * 1-5'   # UTC 02:16 (Beijing 10:16)
+    - cron: '31 6 * * 1-5'   # UTC 06:31 (Beijing 14:31)
+    - cron: '1 8 * * 1-5'    # UTC 08:01 (Beijing 16:01)
   workflow_dispatch:
 
 env:
@@ -62,16 +62,16 @@ import os
 import sys
 from datetime import datetime
 
-# 添加当前目录到 Python 路径
+# Add current directory to Python path
 sys.path.append(os.getcwd())
 
 try:
     from CFETSSentimentSpider import CFETSScheduledSpider
     
-    # 获取当前时间
+    # Get current time argument
     current_time = sys.argv[1] if len(sys.argv) > 1 else None
     
-    # 直接从环境变量获取配置（不要使用os.environ.get()）
+    # Get email config from environment variable
     sender_email = '${{ secrets.SENDER_EMAIL }}'
     sender_password = '${{ secrets.SENDER_PASSWORD }}'
     smtp_server = '${{ secrets.SMTP_SERVER }}'
@@ -86,7 +86,7 @@ try:
     )
     
     if current_time:
-        print(f'beijing time: {current_time}')
+        print(f'Beijing time: {current_time}')
         if current_time == '08:46':
             spider.job_0846()
         elif current_time == '10:16':
@@ -96,25 +96,25 @@ try:
         elif current_time == '16:01':
             spider.job_1601()
         else:
-            # print(f'当前时间 {current_time} 不在预定任务时间内，执行测试模式')
+            print(f'Current time {current_time} is not a scheduled run, running test mode.')
             result = spider.test_now()
             if not result:
                 sys.exit(1)
     else:
-        # print('执行测试模式（无时间参数）')
+        print('Test mode (no time argument)')
         result = spider.test_now()
         if not result:
             sys.exit(1)
             
 except ImportError as e:
-    # print(f"importerror: {e}")
-    # print("currentworkdir:", os.getcwd())
-    # print("directory:", os.listdir('.'))
+    print(f"Import error: {e}")
+    print("Current working directory:", os.getcwd())
+    print("Directory contents:", os.listdir('.'))
     if 'cfets_spider.py' not in os.listdir('.'):
-        print("error: CFETSSentimentSpider.py no exist")
+        print("Error: CFETSSentimentSpider.py does not exist")
     sys.exit(1)
 except Exception as e:
-    print(f"exe wrong: {e}")
+    print(f"Execution error: {e}")
     import traceback
     traceback.print_exc()
     sys.exit(1)
@@ -124,14 +124,14 @@ EOF
       run: |
         CURRENT_HOUR=$(date -u +%H)
         CURRENT_MINUTE=$(date -u +%M)
-        echo "当前UTC时间: $CURRENT_HOUR:$CURRENT_MINUTE"
+        echo "Current UTC time: $CURRENT_HOUR:$CURRENT_MINUTE"
         BEIJING_HOUR=$((10#$CURRENT_HOUR + 8))
         if [ $BEIJING_HOUR -ge 24 ]; then
           BEIJING_HOUR=$((BEIJING_HOUR - 24))
         fi
         BEIJING_HOUR=$(printf "%02d" $BEIJING_HOUR)
         BEIJING_TIME="$BEIJING_HOUR:$CURRENT_MINUTE"
-        echo "对应北京时间: $BEIJING_TIME"
+        echo "Corresponding Beijing time: $BEIJING_TIME"
         
         python run_spider.py "$BEIJING_TIME"
       env:
@@ -146,11 +146,11 @@ EOF
         git config --local user.name "GitHub Action"
         git add sentiment_data_*.json
         if [ -z "$(git diff --cached --name-only)" ]; then
-          echo "没有新的数据文件需要提交"
+          echo "No new data files to commit"
         else
           git commit -m "Auto-update: CFETS sentiment data for $(date +%Y%m%d)"
           git push
-          echo "数据文件已提交并推送"
+          echo "Data files have been committed and pushed"
         fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
