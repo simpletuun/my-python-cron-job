@@ -66,7 +66,7 @@ from datetime import datetime
 sys.path.append(os.getcwd())
 
 try:
-    from cfets_spider import CFETSScheduledSpider
+    from CFETSSentimentSpider import CFETSScheduledSpider
     
     # 获取当前时间
     current_time = sys.argv[1] if len(sys.argv) > 1 else None
@@ -111,7 +111,7 @@ except ImportError as e:
     print("当前工作目录:", os.getcwd())
     print("目录内容:", os.listdir('.'))
     if 'cfets_spider.py' not in os.listdir('.'):
-        print("错误: cfets_spider.py 文件不存在")
+        print("错误: CFETSSentimentSpider.py 文件不存在")
     sys.exit(1)
 except Exception as e:
     print(f"执行错误: {e}")
