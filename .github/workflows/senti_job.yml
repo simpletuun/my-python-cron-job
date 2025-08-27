@@ -2,11 +2,12 @@ name: CFETS Sentiment Data Collector
 
 on:
   schedule:
-    
-    - cron: '46 0 * * 1-5'   
-    - cron: '16 2 * * 1-5'  
-    - cron: '31 6 * * 1-5'  
-    - cron: '1 8 * * 1-5'   
+    # Beijing Time: 08:46, 10:16, 14:31, 16:01 (UTC minus 8 hours)
+    # Only run from Monday to Friday (1-5), weekends may have no data
+    - cron: '46 0 * * 1-5'   # UTC 00:46 (Beijing 08:46)
+    - cron: '16 2 * * 1-5'   # UTC 02:16 (Beijing 10:16)
+    - cron: '31 6 * * 1-5'   # UTC 06:31 (Beijing 14:31)
+    - cron: '1 8 * * 1-5'    # UTC 08:01 (Beijing 16:01)
   workflow_dispatch:
 
 env:
@@ -50,79 +51,10 @@ jobs:
         python -m pip install --upgrade pip
         pip install selenium==4.15.0
 
-    - name: Create Python script for execution
-      run: |
-       cat > run_spider.py << 'EOF'
-import os
-import sys
-from datetime import datetime
-from CFETSSentimentSpider import CFETSScheduledSpider
-sys.path.append(os.getcwd())
-
-try:
-    current_time = sys.argv[1] if len(sys.argv) > 1 else None
-    sender_email = os.environ.get('SENDER_EMAIL')
-    sender_password = os.environ.get('SENDER_PASSWORD')
-    smtp_server = os.environ.get('SMTP_SERVER')
-    smtp_port = int(os.environ.get('SMTP_PORT'))
-    
-    spider = CFETSScheduledSpider()
-    spider.setup_email_config(
-        sender_email=sender_email,
-        sender_password=sender_password,
-        smtp_server=smtp_server,
-        smtp_port=smtp_port
-    )
-    
-    if current_time:
-        print(f'Beijing time: {current_time}')
-        if current_time == '08:46':
-            spider.job_0846()
-        elif current_time == '10:16':
-            spider.job_1016()
-        elif current_time == '14:31':
-            spider.job_1431()
-        elif current_time == '16:01':
-            spider.job_1601()
-        else:
-            print(f'Current time {current_time} is not a scheduled run, running test mode.')
-            result = spider.test_now()
-            if not result:
-                sys.exit(1)
-    else:
-        print('Test mode (no time argument)')
-        result = spider.test_now()
-        if not result:
-            sys.exit(1)
-            
-except ImportError as e:
-    print(f"Import error: {e}")
-    print("Current working directory:", os.getcwd())
-    print("Directory contents:", os.listdir('.'))
-    if 'CFETSSentimentSpider.py' not in os.listdir('.'):
-        print("Error: CFETSSentimentSpider.py does not exist")
-    sys.exit(1)
-except Exception as e:
-    print(f"Execution error: {e}")
-    import traceback
-    traceback.print_exc()
-    sys.exit(1)
-EOF
-
     - name: Run CFETS Spider
       run: |
-        CURRENT_HOUR=$(date -u +%H)
-        CURRENT_MINUTE=$(date -u +%M)
-        echo "Current UTC time: $CURRENT_HOUR:$CURRENT_MINUTE"
-        BEIJING_HOUR=$((10#$CURRENT_HOUR + 8))
-        if [ $BEIJING_HOUR -ge 24 ]; then
-          BEIJING_HOUR=$((BEIJING_HOUR - 24))
-        fi
-        BEIJING_HOUR=$(printf "%02d" $BEIJING_HOUR)
-        BEIJING_TIME="$BEIJING_HOUR:$CURRENT_MINUTE"
-        echo "Corresponding Beijing time: $BEIJING_TIME"
-        
-        python run_spider.py "$BEIJING_TIME"
+        BEIJING_TIME=$(date -u +%H:%M)
+        python -c "import os, sys; sys.path.append(os.getcwd()); from CFETSSentimentSpider import CFETSScheduledSpider; sender_email = os.environ.get('SENDER_EMAIL'); sender_password = os.environ.get('SENDER_PASSWORD'); smtp_server = os.environ.get('SMTP_SERVER'); smtp_port = int(os.environ.get('SMTP_PORT')); spider = CFETSScheduledSpider(); spider.setup_email_config(sender_email=sender_email, sender_password=sender_password, smtp_server=smtp_server, smtp_port=smtp_port); current_time = '$BEIJING_TIME'; print(f'Beijing time: {current_time}'); job_map = {'08:46': spider.job_0846, '10:16': spider.job_1016, '14:31': spider.job_1431, '16:01': spider.job_1601}; job = job_map.get(current_time); print(f'Executing job: {current_time}'); job() if job else (print('No scheduled job for this time, running test mode.') or spider.test_now());"
       env:
         SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
         SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
