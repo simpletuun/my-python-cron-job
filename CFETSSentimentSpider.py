@@ -1,6 +1,11 @@
 import time
 import json
 import schedule
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 from datetime import datetime, date
 from selenium import webdriver
 from selenium.webdriver.common.by import By
@@ -13,6 +18,15 @@ class CFETSScheduledSpider:
     def __init__(self):
         self.url = "https://www.cfets-nex.com.cn/Market/marketData/money"
         self.today_data = {}
+        self.target_email = "ichenry@qq.com"
+
+        # 邮件配置 - 请根据您的邮箱设置修改
+        self.email_config = {
+            'smtp_server': 'smtp.qq.com',  # QQ邮箱SMTP服务器
+            'smtp_port': 587,
+            'sender_email': '',  # 您的发送邮箱
+            'sender_password': '',  # 您的邮箱授权码（不是登录密码）
+        }
 
     def setup_driver(self):
         """设置Chrome浏览器驱动"""
@@ -109,6 +123,86 @@ class CFETSScheduledSpider:
         except Exception as e:
             print(f"保存失败: {e}")
 
+    def generate_email_content(self, is_summary=False):
+        """生成邮件内容"""
+        today_str = date.today().strftime("%Y-%m-%d")
+        current_time = datetime.now().strftime("%H:%M:%S")
+
+        if is_summary:
+            subject = f"CFETS情绪指数日报 - {today_str}"
+            body = f"CFETS情绪指数日报\n日期: {today_str}\n\n"
+        else:
+            subject = f"CFETS情绪指数更新 - {today_str} {current_time}"
+            body = f"CFETS情绪指数更新\n时间: {today_str} {current_time}\n\n"
+
+        if today_str in self.today_data:
+            body += "指数数据:\n"
+            body += "-" * 60 + "\n"
+            body += f"{'时间':<8} {'大行':<8} {'中小行':<8} {'非银':<8} {'综合':<8}\n"
+            body += "-" * 60 + "\n"
+
+            for time_point, values in self.today_data[today_str].items():
+                if len(values) >= 4:
+                    body += f"{time_point:<8} {values[0]:<8.2f} {values[1]:<8.2f} {values[2]:<8.2f} {values[3]:<8.2f}\n"
+
+            body += "-" * 60 + "\n"
+            body += "\n指数含义:\n"
+            body += "- 大行: 大型银行资金面情绪指数\n"
+            body += "- 中小行: 中小银行资金面情绪指数\n"
+            body += "- 非银: 非银机构资金面情绪指数\n"
+            body += "- 综合: 综合情绪指数\n"
+        else:
+            body += "暂无数据"
+
+        return subject, body
+
+    def send_email(self, subject, body, attach_file=None):
+        """发送邮件"""
+        try:
+            # 检查邮件配置
+            if not self.email_config['sender_email'] or not self.email_config['sender_password']:
+                print("邮件配置不完整，请设置发送邮箱和授权码")
+                return False
+
+            # 创建邮件
+            msg = MIMEMultipart()
+            msg['From'] = self.email_config['sender_email']
+            msg['To'] = self.target_email
+            msg['Subject'] = subject
+
+            # 添加邮件正文
+            msg.attach(MIMEText(body, 'plain', 'utf-8'))
+
+            # 添加附件
+            if attach_file:
+                try:
+                    with open(attach_file, "rb") as attachment:
+                        part = MIMEBase('application', 'octet-stream')
+                        part.set_payload(attachment.read())
+                        encoders.encode_base64(part)
+                        part.add_header(
+                            'Content-Disposition',
+                            f'attachment; filename= {attach_file}',
+                        )
+                        msg.attach(part)
+                except Exception as e:
+                    print(f"添加附件失败: {e}")
+
+            # 发送邮件
+            server = smtplib.SMTP(self.email_config['smtp_server'], self.email_config['smtp_port'])
+            server.starttls()
+            server.login(self.email_config['sender_email'], self.email_config['sender_password'])
+            text = msg.as_string()
+            server.sendmail(self.email_config['sender_email'], self.target_email, text)
+            server.quit()
+
+            print(f"邮件发送成功: {subject}")
+            return True
+
+        except Exception as e:
+            print(f"邮件发送失败: {e}")
+            return False
+
     def print_summary(self):
         """打印数据汇总"""
         today_str = date.today().strftime("%Y-%m-%d")
@@ -125,26 +219,43 @@ class CFETSScheduledSpider:
     def job_0846(self):
         """08:46 任务"""
         print("\n执行 08:46 任务")
-        self.get_sentiment_data()
-        self.print_summary()
+        result = self.get_sentiment_data()
+        if result:
+            self.print_summary()
+            # 发送更新邮件
+            subject, body = self.generate_email_content()
+            self.send_email(subject, body)
 
     def job_1016(self):
         """10:16 任务"""
         print("\n执行 10:16 任务")
-        self.get_sentiment_data()
-        self.print_summary()
+        result = self.get_sentiment_data()
+        if result:
+            self.print_summary()
+            # 发送更新邮件
+            subject, body = self.generate_email_content()
+            self.send_email(subject, body)
 
     def job_1431(self):
         """14:31 任务"""
         print("\n执行 14:31 任务")
-        self.get_sentiment_data()
-        self.print_summary()
+        result = self.get_sentiment_data()
+        if result:
+            self.print_summary()
+            # 发送更新邮件
+            subject, body = self.generate_email_content()
+            self.send_email(subject, body)
 
     def job_1601(self):
-        """16:01 任务"""
+        """16:01 任务 - 发送日报"""
         print("\n执行 16:01 任务")
-        self.get_sentiment_data()
-        self.print_summary()
+        result = self.get_sentiment_data()
+        if result:
+            self.print_summary()
+            # 发送日报邮件（带附件）
+            subject, body = self.generate_email_content(is_summary=True)
+            filename = f"sentiment_data_{date.today().strftime('%Y%m%d')}.json"
+            self.send_email(subject, body, filename)
 
     def setup_schedule(self):
         """设置定时任务"""
@@ -156,10 +267,21 @@ class CFETSScheduledSpider:
 
         print("定时任务已设置: 08:46, 10:16, 14:31, 16:01")
 
+    def setup_email_config(self, sender_email, sender_password, smtp_server='smtp.qq.com', smtp_port=587):
+        """设置邮件配置"""
+        self.email_config.update({
+            'sender_email': sender_email,
+            'sender_password': sender_password,
+            'smtp_server': smtp_server,
+            'smtp_port': smtp_port
+        })
+        print("邮件配置已更新")
+
     def run_scheduled(self):
         """运行定时任务"""
         self.setup_schedule()
         print(f"\n定时爬虫启动 - {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"数据将发送到: {self.target_email}")
 
         try:
             while True:
@@ -174,11 +296,20 @@ class CFETSScheduledSpider:
         result = self.get_sentiment_data()
         if result:
             self.print_summary()
+            # 发送测试邮件
+            subject, body = self.generate_email_content()
+            self.send_email(f"[测试] {subject}", body)
         return result
 
 
 if __name__ == "__main__":
     spider = CFETSScheduledSpider()
+
+    # 设置邮件配置 - 请填入您的邮箱信息
+    spider.setup_email_config(
+        sender_email="ichenry@qq.com",      # 您的发送邮箱
+        sender_password=""       # 您的邮箱授权码
+    )
 
     # 测试模式
     spider.test_now()
