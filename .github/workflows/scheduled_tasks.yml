@@ -54,11 +54,65 @@ jobs:
     - name: Setup email configuration
       run: |
         echo "EMAIL_CONFIG='{\"smtp_server\": \"${{ secrets.SMTP_SERVER }}\", \"smtp_port\": ${{ secrets.SMTP_PORT }}, \"sender_email\": \"${{ secrets.SENDER_EMAIL }}\", \"sender_password\": \"${{ secrets.SENDER_PASSWORD }}\"}'" >> $GITHUB_ENV
-      env:
-        SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
-        SMTP_PORT: ${{ secrets.SMTP_PORT }}
-        SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
-        SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
+
+    - name: Create Python script for execution
+      run: |
+        cat > run_spider.py << 'EOF'
+import os
+import sys
+from datetime import datetime
+
+# 添加当前目录到 Python 路径
+sys.path.append(os.getcwd())
+
+try:
+    from cfets_spider import CFETSScheduledSpider
+    
+    # 获取当前时间
+    current_time = sys.argv[1] if len(sys.argv) > 1 else None
+    
+    spider = CFETSScheduledSpider()
+    spider.setup_email_config(
+        sender_email=os.environ.get('SENDER_EMAIL'),
+        sender_password=os.environ.get('SENDER_PASSWORD'),
+        smtp_server=os.environ.get('SMTP_SERVER'),
+        smtp_port=int(os.environ.get('SMTP_PORT', '587'))
+    )
+    
+    if current_time:
+        print(f'检测到北京时间: {current_time}')
+        if current_time == '08:46':
+            spider.job_0846()
+        elif current_time == '10:16':
+            spider.job_1016()
+        elif current_time == '14:31':
+            spider.job_1431()
+        elif current_time == '16:01':
+            spider.job_1601()
+        else:
+            print(f'当前时间 {current_time} 不在预定任务时间内，执行测试模式')
+            result = spider.test_now()
+            if not result:
+                sys.exit(1)
+    else:
+        print('执行测试模式（无时间参数）')
+        result = spider.test_now()
+        if not result:
+            sys.exit(1)
+            
+except ImportError as e:
+    print(f"导入错误: {e}")
+    print("当前工作目录:", os.getcwd())
+    print("目录内容:", os.listdir('.'))
+    if 'cfets_spider.py' not in os.listdir('.'):
+        print("错误: cfets_spider.py 文件不存在")
+    sys.exit(1)
+except Exception as e:
+    print(f"执行错误: {e}")
+    import traceback
+    traceback.print_exc()
+    sys.exit(1)
+EOF
 
     - name: Run CFETS Spider
       run: |
@@ -72,34 +126,13 @@ jobs:
         BEIJING_HOUR=$(printf "%02d" $BEIJING_HOUR)
         BEIJING_TIME="$BEIJING_HOUR:$CURRENT_MINUTE"
         echo "对应北京时间: $BEIJING_TIME"
-        python <<EOF
-import os
-import sys
-sys.path.append(os.getcwd())
-from cfets_spider import CFETSScheduledSpider
-spider = CFETSScheduledSpider()
-spider.setup_email_config(
-    sender_email='${{ secrets.SENDER_EMAIL }}',
-    sender_password='${{ secrets.SENDER_PASSWORD }}',
-    smtp_server='${{ secrets.SMTP_SERVER }}',
-    smtp_port=${{ secrets.SMTP_PORT }}
-)
-current_time = '$BEIJING_TIME'
-print(f'检测到北京时间: {current_time}')
-if current_time == '08:46':
-    spider.job_0846()
-elif current_time == '10:16':
-    spider.job_1016()
-elif current_time == '14:31':
-    spider.job_1431()
-elif current_time == '16:01':
-    spider.job_1601()
-else:
-    print(f'当前时间 {current_time} 不在预定任务时间内，执行测试模式')
-    result = spider.test_now()
-    if not result:
-        sys.exit(1)
-EOF
+        
+        python run_spider.py "$BEIJING_TIME"
+      env:
+        SENDER_EMAIL: ${{ secrets.SENDER_EMAIL }}
+        SENDER_PASSWORD: ${{ secrets.SENDER_PASSWORD }}
+        SMTP_SERVER: ${{ secrets.SMTP_SERVER }}
+        SMTP_PORT: ${{ secrets.SMTP_PORT }}
 
     - name: Commit and push data
       run: |
