@@ -86,7 +86,7 @@ try:
     )
     
     if current_time:
-        print(f'检测到北京时间: {current_time}')
+        print(f'beijing time: {current_time}')
         if current_time == '08:46':
             spider.job_0846()
         elif current_time == '10:16':
@@ -96,25 +96,25 @@ try:
         elif current_time == '16:01':
             spider.job_1601()
         else:
-            print(f'当前时间 {current_time} 不在预定任务时间内，执行测试模式')
+            # print(f'当前时间 {current_time} 不在预定任务时间内，执行测试模式')
             result = spider.test_now()
             if not result:
                 sys.exit(1)
     else:
-        print('执行测试模式（无时间参数）')
+        # print('执行测试模式（无时间参数）')
         result = spider.test_now()
         if not result:
             sys.exit(1)
             
 except ImportError as e:
-    print(f"导入错误: {e}")
-    print("当前工作目录:", os.getcwd())
-    print("目录内容:", os.listdir('.'))
+    # print(f"importerror: {e}")
+    # print("currentworkdir:", os.getcwd())
+    # print("directory:", os.listdir('.'))
     if 'cfets_spider.py' not in os.listdir('.'):
-        print("错误: CFETSSentimentSpider.py 文件不存在")
+        print("error: CFETSSentimentSpider.py no exist")
     sys.exit(1)
 except Exception as e:
-    print(f"执行错误: {e}")
+    print(f"exe wrong: {e}")
     import traceback
     traceback.print_exc()
     sys.exit(1)
