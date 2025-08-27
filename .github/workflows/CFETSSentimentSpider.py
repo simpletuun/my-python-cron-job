@@ -277,4 +277,3 @@ class CFETSScheduledSpider:
         return result
 
 
-This video shows how to run a Python script from within a GitHub Actions workflow.
