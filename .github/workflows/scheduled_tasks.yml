@@ -71,12 +71,18 @@ try:
     # 获取当前时间
     current_time = sys.argv[1] if len(sys.argv) > 1 else None
     
+    # 直接从环境变量获取配置（不要使用os.environ.get()）
+    sender_email = '${{ secrets.SENDER_EMAIL }}'
+    sender_password = '${{ secrets.SENDER_PASSWORD }}'
+    smtp_server = '${{ secrets.SMTP_SERVER }}'
+    smtp_port = ${{ secrets.SMTP_PORT }}
+    
     spider = CFETSScheduledSpider()
     spider.setup_email_config(
-        sender_email=os.environ.get('SENDER_EMAIL'),
-        sender_password=os.environ.get('SENDER_PASSWORD'),
-        smtp_server=os.environ.get('SMTP_SERVER'),
-        smtp_port=int(os.environ.get('SMTP_PORT', '587'))
+        sender_email=sender_email,
+        sender_password=sender_password,
+        smtp_server=smtp_server,
+        smtp_port=smtp_port
     )
     
     if current_time:
