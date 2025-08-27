@@ -89,16 +89,16 @@ jobs:
         echo "对应北京时间: $BEIJING_TIME"
         
         # 根据不同时间点执行不同任务
-        python -c "
+        run:
+          python <<EOF
 import os
 import sys
 sys.path.append(os.getcwd())
 
-from CFETSSentimentSpider import CFETSScheduledSpider  # 替换为你的实际文件名
+from cfets_spider import CFETSScheduledSpider
 
 spider = CFETSScheduledSpider()
 
-# 设置邮箱配置
 spider.setup_email_config(
     sender_email='${{ secrets.SENDER_EMAIL }}',
     sender_password='${{ secrets.SENDER_PASSWORD }}',
@@ -106,7 +106,6 @@ spider.setup_email_config(
     smtp_port=${{ secrets.SMTP_PORT }}
 )
 
-# 根据时间执行相应任务
 current_time = '$BEIJING_TIME'
 print(f'检测到北京时间: {current_time}')
 
@@ -123,7 +122,7 @@ else:
     result = spider.test_now()
     if not result:
         sys.exit(1)
-        "
+EOF
 
     # 8. 保存数据文件（如果有新数据）
     - name: Commit and push data
