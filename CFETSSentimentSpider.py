@@ -16,7 +16,7 @@ class CFETSScheduledSpider:
     def __init__(self):
         self.url = "https://www.cfets-nex.com.cn/Market/marketData/money"
         self.today_data = {}
-        self.target_email = "ichenry@qq.com"
+        self.target_email = "wangjin798@pingan.com.cn"
 
         # Initialize email config with placeholder values, to be populated by the workflow
         self.email_config = {
